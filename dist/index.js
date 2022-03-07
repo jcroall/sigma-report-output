@@ -324,11 +324,13 @@ function createMessageFromIssue(issue) {
     if (issue.fixes) {
         let suggestion = undefined;
         let fix = issue.fixes[0];
-        let current_line = get_line(issue.filepath, fix.actions[0].location.start.line);
+        let current_line = get_line(issue.filepath, fix.actions[0].location.start.line - 1);
         (0, core_1.info)(`DEBUG: current_line=${current_line}`);
         suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) + fix.actions[0].contents + current_line.substring(fix.actions[0].location.end.column - 1, current_line.length);
+        (0, core_1.info)(`DEBUG: suggestion=${suggestion}`);
     }
     const suggestionString = suggestion ? '\n```' + suggestion + '\n```' : '';
+    (0, core_1.info)(`DEBUG: suggestionString=${suggestionString}`);
     return `${exports.COMMENT_PREFACE}
 ${(0, exports.uuidCommentOf)(issue)}
 # Sigma Issue - ${issueName}
