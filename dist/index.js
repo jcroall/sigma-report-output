@@ -303,7 +303,7 @@ const uuidCommentOf = (issue) => `<!-- ${issue.uuid} -->`;
 exports.uuidCommentOf = uuidCommentOf;
 function get_line(filename, line_no) {
     var data = fs_1.default.readFileSync(filename, 'utf8');
-    var lines = data.split("\n");
+    var lines = data.split('\n');
     if (+line_no > lines.length) {
         throw new Error('File end reached without finding line');
     }
