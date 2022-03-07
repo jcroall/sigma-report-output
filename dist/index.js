@@ -313,7 +313,7 @@ function createMessageFromIssue(issue) {
         let suggestion = undefined;
         let fix = issue.fixes[0];
         (0, core_1.info)(`DEBUG: Fix included, start line=${fix.actions[0].location.start.line} col=${fix.actions[0].location.start.column} byte=${fix.actions[0].location.start.byte}`);
-        const nthline = __nccwpck_require__(8377), filePath = issue['filepath'], rowIndex = fix.actions[0].location.start.line - 1;
+        const nthline = __nccwpck_require__(7223), filePath = issue['filepath'], rowIndex = fix.actions[0].location.start.line - 1;
         var current_line = nthline(rowIndex, filePath);
         suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) + fix.actions[0].contents + current_line.substring(fix.actions[0].location.end.column - 1, current_line.length);
     }
@@ -8286,6 +8286,46 @@ module.exports.implForWrapper = function (wrapper) {
 
 /***/ }),
 
+/***/ 7223:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var readline = __nccwpck_require__(1058),
+  fs = __nccwpck_require__(5747)
+
+var outOfRangeError = function(filepath, n) {
+  return new RangeError(
+    `Line with index ${n} does not exist in '${filepath}. Note that line indexing is zero-based'`
+  )
+}
+
+module.exports = function(n, filepath) {
+  return new Promise(function(resolve, reject) {
+    if (n < 0 || n % 1 !== 0)
+      return reject(new RangeError(`Invalid line number`))
+
+    var cursor = 0,
+      input = fs.createReadStream(filepath),
+      rl = readline.createInterface({ input })
+
+    rl.on('line', function(line) {
+      if (cursor++ === n) {
+        rl.close()
+        input.close()
+        resolve(line)
+      }
+    })
+
+    rl.on('error', reject)
+
+    input.on('end', function() {
+      reject(outOfRangeError(filepath, n))
+    })
+  })
+}
+
+
+/***/ }),
+
 /***/ 1223:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -8689,14 +8729,6 @@ module.exports = eval("require")("encoding");
 
 /***/ }),
 
-/***/ 8377:
-/***/ ((module) => {
-
-module.exports = eval("require")("nthline");
-
-
-/***/ }),
-
 /***/ 8661:
 /***/ ((module) => {
 
@@ -8774,6 +8806,14 @@ module.exports = require("path");
 
 "use strict";
 module.exports = require("punycode");
+
+/***/ }),
+
+/***/ 1058:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("readline");
 
 /***/ }),
 
