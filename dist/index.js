@@ -312,7 +312,6 @@ function createMessageFromIssue(issue) {
     if (issue.fixes) {
         let suggestion = undefined;
         let fix = issue.fixes[0];
-        (0, core_1.info)(`DEBUG: Fix included, start line=${fix.actions[0].location.start.line} col=${fix.actions[0].location.start.column} byte=${fix.actions[0].location.start.byte}`);
         const nthline = __nccwpck_require__(7223), filePath = issue['filepath'], rowIndex = fix.actions[0].location.start.line - 1;
         var current_line = nthline(rowIndex, filePath);
         suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) + fix.actions[0].contents + current_line.substring(fix.actions[0].location.end.column - 1, current_line.length);
