@@ -285,18 +285,30 @@ run();
 /***/ }),
 
 /***/ 5036:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDiffMap = exports.createMessageFromIssueWithLineInformation = exports.createMessageFromIssue = exports.uuidCommentOf = exports.COMMENT_PREFACE = exports.UNKNOWN_FILE = void 0;
 const github_context_1 = __nccwpck_require__(4915);
 const core_1 = __nccwpck_require__(2186);
+const fs_1 = __importDefault(__nccwpck_require__(5747));
 exports.UNKNOWN_FILE = 'Unknown File';
 exports.COMMENT_PREFACE = '<!-- Comment managed by sigma-report-output action, do not modify! -->';
 const uuidCommentOf = (issue) => `<!-- ${issue.uuid} -->`;
 exports.uuidCommentOf = uuidCommentOf;
+function get_line(filename, line_no) {
+    var data = fs_1.default.readFileSync(filename, 'utf8');
+    var lines = data.split("\n");
+    if (+line_no > lines.length) {
+        throw new Error('File end reached without finding line');
+    }
+    return lines[+line_no];
+}
 function createMessageFromIssue(issue) {
     var _a, _b;
     const issueName = issue.summary;
@@ -312,10 +324,8 @@ function createMessageFromIssue(issue) {
     if (issue.fixes) {
         let suggestion = undefined;
         let fix = issue.fixes[0];
-        const nthline = __nccwpck_require__(7223), rowIndex = fix.actions[0].location.start.line - 1;
-        (0, core_1.info)(`nthline(rowIndex=${rowIndex}, ${issue.filepath}`);
-        var current_line = nthline(rowIndex, issue.filepath);
-        (0, core_1.info)(`current_line=${current_line}`);
+        let current_line = get_line(issue.filepath, fix.actions[0].location.start.line);
+        (0, core_1.info)(`DEBUG: current_line=${current_line}`);
         suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) + fix.actions[0].contents + current_line.substring(fix.actions[0].location.end.column - 1, current_line.length);
     }
     const suggestionString = suggestion ? '\n```' + suggestion + '\n```' : '';
@@ -8287,46 +8297,6 @@ module.exports.implForWrapper = function (wrapper) {
 
 /***/ }),
 
-/***/ 7223:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-var readline = __nccwpck_require__(1058),
-  fs = __nccwpck_require__(5747)
-
-var outOfRangeError = function(filepath, n) {
-  return new RangeError(
-    `Line with index ${n} does not exist in '${filepath}. Note that line indexing is zero-based'`
-  )
-}
-
-module.exports = function(n, filepath) {
-  return new Promise(function(resolve, reject) {
-    if (n < 0 || n % 1 !== 0)
-      return reject(new RangeError(`Invalid line number`))
-
-    var cursor = 0,
-      input = fs.createReadStream(filepath),
-      rl = readline.createInterface({ input })
-
-    rl.on('line', function(line) {
-      if (cursor++ === n) {
-        rl.close()
-        input.close()
-        resolve(line)
-      }
-    })
-
-    rl.on('error', reject)
-
-    input.on('end', function() {
-      reject(outOfRangeError(filepath, n))
-    })
-  })
-}
-
-
-/***/ }),
-
 /***/ 1223:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -8807,14 +8777,6 @@ module.exports = require("path");
 
 "use strict";
 module.exports = require("punycode");
-
-/***/ }),
-
-/***/ 1058:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("readline");
 
 /***/ }),
 
