@@ -313,6 +313,7 @@ function createMessageFromIssue(issue) {
         let suggestion = undefined;
         let fix = issue.fixes[0];
         const nthline = __nccwpck_require__(7223), rowIndex = fix.actions[0].location.start.line - 1;
+        (0, core_1.info)(`nthline(rowIndex=${rowIndex}, ${issue.filepath}`);
         var current_line = nthline(rowIndex, issue.filepath);
         suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) + fix.actions[0].contents + current_line.substring(fix.actions[0].location.end.column - 1, current_line.length);
     }
