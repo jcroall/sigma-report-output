@@ -234,7 +234,7 @@ function run() {
                 const existingMatchingIssueComment = existingIssueComments.filter(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.includes(reporting_1.COMMENT_PREFACE); }).find(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.includes(mergeKeyComment); });
                 if (existingMatchingReviewComment !== undefined) {
                     (0, core_1.info)(`Issue already reported in comment ${existingMatchingReviewComment.id}, updating...`);
-                    (0, pull_request_1.updateExistingReviewComment)(existingMatchingReviewComment.id, yield reviewCommentBody);
+                    (0, pull_request_1.updateExistingReviewComment)(existingMatchingReviewComment.id, reviewCommentBody);
                 }
                 else if (existingMatchingIssueComment !== undefined) {
                     (0, core_1.info)(`Issue already reported in comment ${existingMatchingIssueComment.id}, updating...`);
@@ -242,7 +242,7 @@ function run() {
                 }
                 else if (isInDiff(issue, diffMap)) {
                     (0, core_1.info)('Issue not reported, adding a comment to the review.');
-                    newReviewComments.push(createReviewComment(issue, yield reviewCommentBody));
+                    newReviewComments.push(createReviewComment(issue, reviewCommentBody));
                 }
                 else {
                     (0, core_1.info)('Issue not reported, adding an issue comment.');
@@ -285,19 +285,10 @@ run();
 /***/ }),
 
 /***/ 5036:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDiffMap = exports.createMessageFromIssueWithLineInformation = exports.createMessageFromIssue = exports.uuidCommentOf = exports.COMMENT_PREFACE = exports.UNKNOWN_FILE = void 0;
 const github_context_1 = __nccwpck_require__(4915);
@@ -308,29 +299,26 @@ const uuidCommentOf = (issue) => `<!-- ${issue.uuid} -->`;
 exports.uuidCommentOf = uuidCommentOf;
 function createMessageFromIssue(issue) {
     var _a, _b;
-    return __awaiter(this, void 0, void 0, function* () {
-        const issueName = issue.summary;
-        const checkerNameString = issue.checker_id;
-        const impactString = issue.severity ? issue.severity.impact : 'Unknown';
-        const cweString = ((_a = issue.taxonomies) === null || _a === void 0 ? void 0 : _a.cwe) ? `, CWE-${(_b = issue.taxonomies) === null || _b === void 0 ? void 0 : _b.cwe[0]}` : '';
-        const description = issue.desc;
-        const remediation = issue.remediation ? issue.remediation : 'Not available';
-        const remediationString = issue.remediation ? `## How to fix\r\n ${remediation}` : '';
-        const suggestion = undefined;
-        // JC: Assume only one fix for now
-        // TODO: Follow up with roadmap plans for fixes
-        if (issue.fixes) {
-            let suggestion = undefined;
-            let fix = issue.fixes[0];
-            (0, core_1.info)(`DEBUG: Fix included, start line=${fix.actions[0].location.start.line} col=${fix.actions[0].location.start.column} byte=${fix.actions[0].location.start.byte}`);
-            const nthline = __nccwpck_require__(8377), filePath = issue['filepath'], rowIndex = fix.actions[0].location.start.line - 1;
-            var current_line = yield nthline(rowIndex, filePath);
-            suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) +
-                fix.actions[0].contents +
-                current_line.substring(fix.actions[0].location.end.column - 1, current_line.length);
-        }
-        const suggestionString = suggestion ? "\n```" + suggestion + "\n```" : '';
-        return `${exports.COMMENT_PREFACE}
+    const issueName = issue.summary;
+    const checkerNameString = issue.checker_id;
+    const impactString = issue.severity ? issue.severity.impact : 'Unknown';
+    const cweString = ((_a = issue.taxonomies) === null || _a === void 0 ? void 0 : _a.cwe) ? `, CWE-${(_b = issue.taxonomies) === null || _b === void 0 ? void 0 : _b.cwe[0]}` : '';
+    const description = issue.desc;
+    const remediation = issue.remediation ? issue.remediation : 'Not available';
+    const remediationString = issue.remediation ? `## How to fix\r\n ${remediation}` : '';
+    const suggestion = undefined;
+    // JC: Assume only one fix for now
+    // TODO: Follow up with roadmap plans for fixes
+    if (issue.fixes) {
+        let suggestion = undefined;
+        let fix = issue.fixes[0];
+        (0, core_1.info)(`DEBUG: Fix included, start line=${fix.actions[0].location.start.line} col=${fix.actions[0].location.start.column} byte=${fix.actions[0].location.start.byte}`);
+        const nthline = __nccwpck_require__(8377), filePath = issue['filepath'], rowIndex = fix.actions[0].location.start.line - 1;
+        var current_line = nthline(rowIndex, filePath);
+        suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) + fix.actions[0].contents + current_line.substring(fix.actions[0].location.end.column - 1, current_line.length);
+    }
+    const suggestionString = suggestion ? '\n```' + suggestion + '\n```' : '';
+    return `${exports.COMMENT_PREFACE}
 ${(0, exports.uuidCommentOf)(issue)}
 # Sigma Issue - ${issueName}
 ${description}
@@ -341,7 +329,6 @@ ${remediationString}
 
 ${suggestionString}
 `;
-    });
 }
 exports.createMessageFromIssue = createMessageFromIssue;
 function createMessageFromIssueWithLineInformation(issue) {
