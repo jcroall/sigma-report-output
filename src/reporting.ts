@@ -1,41 +1,40 @@
 import {context} from '@actions/github'
 import {getSha, relativizePath} from './github/github-context'
-import {IssueOccurrence} from './json-v7-schema'
+import {SigmaIssueOccurrence} from './sigma-schema'
 
 export const UNKNOWN_FILE = 'Unknown File'
-export const COMMENT_PREFACE = '<!-- Comment managed by coverity-report-output-v7 action, do not modify! -->'
+export const COMMENT_PREFACE = '<!-- Comment managed by sigma-report-output action, do not modify! -->'
 
-export const mergeKeyCommentOf = (issue: IssueOccurrence): string => `<!-- ${issue.mergeKey} -->`
+export const uuidCommentOf = (issue: SigmaIssueOccurrence): string => `<!-- ${issue.uuid} -->`
 
-export function createMessageFromIssue(issue: IssueOccurrence): string {
-  const issueName = issue.checkerProperties ? issue.checkerProperties.subcategoryShortDescription : issue.checkerName
-  const checkerNameString = issue.checkerProperties ? `\r\n_${issue.checkerName}_` : ''
-  const impactString = issue.checkerProperties ? issue.checkerProperties.impact : 'Unknown'
-  const cweString = issue.checkerProperties ? `, CWE-${issue.checkerProperties.cweCategory}` : ''
-  const mainEvent = issue.events.find(event => event.main === true)
-  const mainEventDescription = mainEvent ? mainEvent.eventDescription : ''
-  const remediationEvent = issue.events.find(event => event.remediation === true)
-  const remediationString = remediationEvent ? `## How to fix\r\n ${remediationEvent.eventDescription}` : ''
+export function createMessageFromIssue(issue: SigmaIssueOccurrence): string {
+  const issueName = issue.summary
+  const checkerNameString = issue.checker_id
+  const impactString = issue.severity ? issue.severity.impact : 'Unknown'
+  const cweString = issue.taxonomies?.cwe ? `, CWE-${issue.taxonomies?.cwe[0]}` : ''
+  const description = issue.desc
+  const remediation = issue.remediation ? issue.remediation : 'Not available'
+  const remediationString = issue.remediation ? `## How to fix\r\n ${remediation}` : ''
 
   return `${COMMENT_PREFACE}
-${mergeKeyCommentOf(issue)}
-# Coverity Issue - ${issueName}
-${mainEventDescription}
+${uuidCommentOf(issue)}
+# Sigma Issue - ${issueName}
+${description}
 
-_${impactString} Impact${cweString}_${checkerNameString}
+_${impactString} Impact${cweString}_ ${checkerNameString}
 
 ${remediationString}
 `
 }
 
-export function createMessageFromIssueWithLineInformation(issue: IssueOccurrence): string {
+export function createMessageFromIssueWithLineInformation(issue: SigmaIssueOccurrence): string {
   const message = createMessageFromIssue(issue)
-  const relativePath = relativizePath(issue.mainEventFilePathname)
+  const relativePath = relativizePath(issue.filepath)
 
   return `${message}
 ## Issue location
 This issue was discovered outside the diff for this Pull Request. You can find it at:
-[${relativePath}:${issue.mainEventLineNumber}](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/blob/${process.env.GITHUB_SHA}/${relativePath}#L${issue.mainEventLineNumber})
+[${relativePath}:${issue.location.start.line}](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/blob/${process.env.GITHUB_SHA}/${relativePath}#L${issue.location.start.line})
 `
 }
 

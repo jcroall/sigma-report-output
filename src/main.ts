@@ -1,7 +1,14 @@
 import fs from 'fs'
 import {createIssueComment, createReview, getExistingIssueComments, getExistingReviewComments, getPullRequestDiff, updateExistingIssueComment, updateExistingReviewComment} from './github/pull-request'
-import {CoverityIssuesView, IssueOccurrence} from './json-v7-schema'
-import {COMMENT_PREFACE, createMessageFromIssue, createMessageFromIssueWithLineInformation, DiffMap, getDiffMap, mergeKeyCommentOf} from './reporting'
+import {SigmaIssuesView, SigmaIssueOccurrence} from './sigma-schema'
+import {
+  COMMENT_PREFACE,
+  createMessageFromIssue,
+  createMessageFromIssueWithLineInformation,
+  DiffMap,
+  getDiffMap,
+  uuidCommentOf
+} from './reporting'
 import {isPullRequest, relativizePath} from './github/github-context'
 import {JSON_FILE_PATH} from './inputs'
 import {info} from '@actions/core'
@@ -11,8 +18,8 @@ async function run(): Promise<void> {
   info(`Using JSON file path: ${JSON_FILE_PATH}`)
 
   // TODO validate file exists and is .json?
-  const jsonV7Content = fs.readFileSync(JSON_FILE_PATH)
-  const coverityIssues = JSON.parse(jsonV7Content.toString()) as CoverityIssuesView
+  const jsonContent = fs.readFileSync(JSON_FILE_PATH)
+  const sigmaIssues = JSON.parse(jsonContent.toString()) as SigmaIssuesView
 
   if (isPullRequest()) {
     const newReviewComments = []
@@ -20,14 +27,14 @@ async function run(): Promise<void> {
     const existingIssueComments = await getExistingIssueComments()
     const diffMap = await getPullRequestDiff().then(getDiffMap)
 
-    for (const issue of coverityIssues.issues) {
-      info(`Found Coverity Issue ${issue.mergeKey} at ${issue.mainEventFilePathname}:${issue.mainEventLineNumber}`)
-      const mergeKeyComment = mergeKeyCommentOf(issue)
+    for (const issue of sigmaIssues.issues.issues) {
+      info(`Found Coverity Issue ${issue.uuid} at ${issue.filepath}:${issue.location.start.line}`)
+      const mergeKeyComment = uuidCommentOf(issue)
       const reviewCommentBody = createMessageFromIssue(issue)
       const issueCommentBody = createMessageFromIssueWithLineInformation(issue)
 
       const existingMatchingReviewComment = existingReviewComments
-        .filter(comment => comment.line === issue.mainEventLineNumber)
+        .filter(comment => comment.line === issue.location.start.line)
         .filter(comment => comment.body.includes(COMMENT_PREFACE))
         .find(comment => comment.body.includes(mergeKeyComment))
 
@@ -54,24 +61,24 @@ async function run(): Promise<void> {
     }
   }
 
-  info(`Found ${coverityIssues.issues.length} Coverity issues.`)
+  info(`Found ${sigmaIssues.issues.issues.length} Coverity issues.`)
 }
 
-function isInDiff(issue: IssueOccurrence, diffMap: DiffMap): boolean {
-  const diffHunks = diffMap.get(issue.mainEventFilePathname)
+function isInDiff(issue: SigmaIssueOccurrence, diffMap: DiffMap): boolean {
+  const diffHunks = diffMap.get(issue.filepath)
 
   if (!diffHunks) {
     return false
   }
 
-  return diffHunks.filter(hunk => hunk.firstLine <= issue.mainEventLineNumber).some(hunk => issue.mainEventLineNumber <= hunk.lastLine)
+  return diffHunks.filter(hunk => hunk.firstLine <= issue.location.start.line).some(hunk => issue.location.start.line <= hunk.lastLine)
 }
 
-function createReviewComment(issue: IssueOccurrence, commentBody: string): NewReviewComment {
+function createReviewComment(issue: SigmaIssueOccurrence, commentBody: string): NewReviewComment {
   return {
-    path: relativizePath(issue.mainEventFilePathname),
+    path: relativizePath(issue.filepath),
     body: commentBody,
-    line: issue.mainEventLineNumber,
+    line: issue.location.start.line,
     side: 'RIGHT'
   }
 }
