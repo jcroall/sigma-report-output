@@ -1,6 +1,8 @@
 import {context} from '@actions/github'
 import {getSha, relativizePath} from './github/github-context'
 import {SigmaIssueOccurrence} from './sigma-schema'
+import {log} from 'util'
+import {info} from '@actions/core'
 
 export const UNKNOWN_FILE = 'Unknown File'
 export const COMMENT_PREFACE = '<!-- Comment managed by sigma-report-output action, do not modify! -->'
@@ -15,6 +17,25 @@ export function createMessageFromIssue(issue: SigmaIssueOccurrence): string {
   const description = issue.desc
   const remediation = issue.remediation ? issue.remediation : 'Not available'
   const remediationString = issue.remediation ? `## How to fix\r\n ${remediation}` : ''
+  const suggestion = undefined
+
+  // JC: Assume only one fix for now
+  // TODO: Follow up with roadmap plans for fixes
+  if (issue.fixes) {
+    let suggestion = undefined
+    let fix = issue.fixes[0]
+
+    info(`DEBUG: Fix included, start line=${fix.actions[0].location.start.line} col=${fix.actions[0].location.start.column} byte=${fix.actions[0].location.start.byte}`)
+
+    const nthline = require('nthline'),
+      filePath = issue['filepath'],
+      rowIndex = fix.actions[0].location.start.line - 1
+    var current_line = nthline(rowIndex, filePath)
+
+    suggestion = current_line.substring(0, fix.actions[0].location.start.column - 1) + fix.actions[0].contents + current_line.substring(fix.actions[0].location.end.column - 1, current_line.length)
+  }
+
+  const suggestionString = suggestion ? '\n```' + suggestion + '\n```' : ''
 
   return `${COMMENT_PREFACE}
 ${uuidCommentOf(issue)}
@@ -24,12 +45,16 @@ ${description}
 _${impactString} Impact${cweString}_ ${checkerNameString}
 
 ${remediationString}
+
+${suggestionString}
 `
 }
 
 export function createMessageFromIssueWithLineInformation(issue: SigmaIssueOccurrence): string {
   const message = createMessageFromIssue(issue)
   const relativePath = relativizePath(issue.filepath)
+
+  info(`DEBUG: issue.filepath=${issue.filepath}`)
 
   return `${message}
 ## Issue location
@@ -51,6 +76,8 @@ export function getDiffMap(rawDiff: string): DiffMap {
         path = UNKNOWN_FILE
       }
 
+      path = relativizePath(path)
+
       diffMap.set(path, [])
     }
 
@@ -60,7 +87,7 @@ export function getDiffMap(rawDiff: string): DiffMap {
 
       const linesAddedPosition = changedLines.indexOf('+')
       if (linesAddedPosition > -1) {
-        // We only care about the right side because Coverity can only analyze what's there, not what used to be --rotte FEB 2022
+        // We only care about the right side because Sigma can only analyze what's there, not what used to be --rotte FEB 2022
         const linesAddedString = changedLines.substring(linesAddedPosition + 1)
         const separatorPosition = linesAddedString.indexOf(',')
 

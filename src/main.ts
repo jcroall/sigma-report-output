@@ -1,14 +1,7 @@
 import fs from 'fs'
 import {createIssueComment, createReview, getExistingIssueComments, getExistingReviewComments, getPullRequestDiff, updateExistingIssueComment, updateExistingReviewComment} from './github/pull-request'
 import {SigmaIssuesView, SigmaIssueOccurrence} from './sigma-schema'
-import {
-  COMMENT_PREFACE,
-  createMessageFromIssue,
-  createMessageFromIssueWithLineInformation,
-  DiffMap,
-  getDiffMap,
-  uuidCommentOf
-} from './reporting'
+import {COMMENT_PREFACE, createMessageFromIssue, createMessageFromIssueWithLineInformation, DiffMap, getDiffMap, uuidCommentOf} from './reporting'
 import {isPullRequest, relativizePath} from './github/github-context'
 import {JSON_FILE_PATH} from './inputs'
 import {info} from '@actions/core'
@@ -28,7 +21,7 @@ async function run(): Promise<void> {
     const diffMap = await getPullRequestDiff().then(getDiffMap)
 
     for (const issue of sigmaIssues.issues.issues) {
-      info(`Found Coverity Issue ${issue.uuid} at ${issue.filepath}:${issue.location.start.line}`)
+      info(`Found Sigma Issue ${issue.uuid} at ${issue.filepath}:${issue.location.start.line}`)
       const mergeKeyComment = uuidCommentOf(issue)
       const reviewCommentBody = createMessageFromIssue(issue)
       const issueCommentBody = createMessageFromIssueWithLineInformation(issue)
@@ -61,7 +54,7 @@ async function run(): Promise<void> {
     }
   }
 
-  info(`Found ${sigmaIssues.issues.issues.length} Coverity issues.`)
+  info(`Found ${sigmaIssues.issues.issues.length} Sigma issues.`)
 }
 
 function isInDiff(issue: SigmaIssueOccurrence, diffMap: DiffMap): boolean {
@@ -71,12 +64,20 @@ function isInDiff(issue: SigmaIssueOccurrence, diffMap: DiffMap): boolean {
     return false
   }
 
+  // JC: For some reason the filter statement below is not working for sigma.
+  // TODO: Come back to this.
+  for (const hunk of diffHunks) {
+    if (issue.location.start.line >= hunk.firstLine && issue.location.start.line <= hunk.lastLine) {
+      return true
+    }
+  }
+
   return diffHunks.filter(hunk => hunk.firstLine <= issue.location.start.line).some(hunk => issue.location.start.line <= hunk.lastLine)
 }
 
 function createReviewComment(issue: SigmaIssueOccurrence, commentBody: string): NewReviewComment {
   return {
-    path: relativizePath(issue.filepath),
+    path: issue.filepath,
     body: commentBody,
     line: issue.location.start.line,
     side: 'RIGHT'
