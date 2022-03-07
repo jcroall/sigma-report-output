@@ -223,7 +223,7 @@ function run() {
             const existingIssueComments = yield (0, pull_request_1.getExistingIssueComments)();
             const diffMap = yield (0, pull_request_1.getPullRequestDiff)().then(reporting_1.getDiffMap);
             for (const issue of sigmaIssues.issues.issues) {
-                (0, core_1.info)(`Found Coverity Issue ${issue.uuid} at ${issue.filepath}:${issue.location.start.line}`);
+                (0, core_1.info)(`Found Sigma Issue ${issue.uuid} at ${issue.filepath}:${issue.location.start.line}`);
                 const mergeKeyComment = (0, reporting_1.uuidCommentOf)(issue);
                 const reviewCommentBody = (0, reporting_1.createMessageFromIssue)(issue);
                 const issueCommentBody = (0, reporting_1.createMessageFromIssueWithLineInformation)(issue);
@@ -254,11 +254,13 @@ function run() {
                 (0, pull_request_1.createReview)(newReviewComments);
             }
         }
-        (0, core_1.info)(`Found ${sigmaIssues.issues.issues.length} Coverity issues.`);
+        (0, core_1.info)(`Found ${sigmaIssues.issues.issues.length} Sigma issues.`);
     });
 }
 function isInDiff(issue, diffMap) {
+    (0, core_1.info)(`isInDiff(issue=${issue} diffMap=${diffMap} issue filepath=${issue.filepath}`);
     const diffHunks = diffMap.get(issue.filepath);
+    (0, core_1.info)(`diffHunks=${diffHunks}`);
     if (!diffHunks) {
         return false;
     }
@@ -285,6 +287,7 @@ run();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDiffMap = exports.createMessageFromIssueWithLineInformation = exports.createMessageFromIssue = exports.uuidCommentOf = exports.COMMENT_PREFACE = exports.UNKNOWN_FILE = void 0;
 const github_context_1 = __nccwpck_require__(4915);
+const core_1 = __nccwpck_require__(2186);
 exports.UNKNOWN_FILE = 'Unknown File';
 exports.COMMENT_PREFACE = '<!-- Comment managed by sigma-report-output action, do not modify! -->';
 const uuidCommentOf = (issue) => `<!-- ${issue.uuid} -->`;
@@ -312,6 +315,7 @@ exports.createMessageFromIssue = createMessageFromIssue;
 function createMessageFromIssueWithLineInformation(issue) {
     const message = createMessageFromIssue(issue);
     const relativePath = (0, github_context_1.relativizePath)(issue.filepath);
+    (0, core_1.info)(`DEBUG: issue.filepath=${issue.filepath}`);
     return `${message}
 ## Issue location
 This issue was discovered outside the diff for this Pull Request. You can find it at:
@@ -338,7 +342,7 @@ function getDiffMap(rawDiff) {
             changedLines = changedLines.substring(0, changedLines.indexOf(' @@'));
             const linesAddedPosition = changedLines.indexOf('+');
             if (linesAddedPosition > -1) {
-                // We only care about the right side because Coverity can only analyze what's there, not what used to be --rotte FEB 2022
+                // We only care about the right side because Sigma can only analyze what's there, not what used to be --rotte FEB 2022
                 const linesAddedString = changedLines.substring(linesAddedPosition + 1);
                 const separatorPosition = linesAddedString.indexOf(',');
                 const startLine = parseInt(linesAddedString.substring(0, separatorPosition));
