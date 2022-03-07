@@ -265,8 +265,13 @@ function isInDiff(issue, diffMap) {
         return false;
     }
     (0, core_1.info)(`line=${issue.location.start.line}`);
+    // JC: For some reason the filter statement below is not working for sigma.
+    // TODO: Come back to this.
     for (const hunk of diffHunks) {
         (0, core_1.info)(`first=${hunk.firstLine} last=${hunk.lastLine}`);
+        if (issue.location.start.line >= hunk.firstLine && issue.location.start.line <= hunk.lastLine) {
+            return true;
+        }
     }
     return diffHunks.filter(hunk => hunk.firstLine <= issue.location.start.line).some(hunk => issue.location.start.line <= hunk.lastLine);
 }
