@@ -335,6 +335,7 @@ function getDiffMap(rawDiff) {
             if (path === undefined) {
                 path = exports.UNKNOWN_FILE;
             }
+            path = (0, github_context_1.relativizePath)(path);
             diffMap.set(path, []);
         }
         if (line.startsWith('@@')) {
