@@ -215,20 +215,20 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.info)(`Using JSON file path: ${inputs_1.JSON_FILE_PATH}`);
         // TODO validate file exists and is .json?
-        const jsonV7Content = fs_1.default.readFileSync(inputs_1.JSON_FILE_PATH);
-        const coverityIssues = JSON.parse(jsonV7Content.toString());
+        const jsonContent = fs_1.default.readFileSync(inputs_1.JSON_FILE_PATH);
+        const sigmaIssues = JSON.parse(jsonContent.toString());
         if ((0, github_context_1.isPullRequest)()) {
             const newReviewComments = [];
             const existingReviewComments = yield (0, pull_request_1.getExistingReviewComments)();
             const existingIssueComments = yield (0, pull_request_1.getExistingIssueComments)();
             const diffMap = yield (0, pull_request_1.getPullRequestDiff)().then(reporting_1.getDiffMap);
-            for (const issue of coverityIssues.issues) {
-                (0, core_1.info)(`Found Coverity Issue ${issue.mergeKey} at ${issue.mainEventFilePathname}:${issue.mainEventLineNumber}`);
-                const mergeKeyComment = (0, reporting_1.mergeKeyCommentOf)(issue);
+            for (const issue of sigmaIssues.issues.issues) {
+                (0, core_1.info)(`Found Coverity Issue ${issue.uuid} at ${issue.filepath}:${issue.location.start.line}`);
+                const mergeKeyComment = (0, reporting_1.uuidCommentOf)(issue);
                 const reviewCommentBody = (0, reporting_1.createMessageFromIssue)(issue);
                 const issueCommentBody = (0, reporting_1.createMessageFromIssueWithLineInformation)(issue);
                 const existingMatchingReviewComment = existingReviewComments
-                    .filter(comment => comment.line === issue.mainEventLineNumber)
+                    .filter(comment => comment.line === issue.location.start.line)
                     .filter(comment => comment.body.includes(reporting_1.COMMENT_PREFACE))
                     .find(comment => comment.body.includes(mergeKeyComment));
                 const existingMatchingIssueComment = existingIssueComments.filter(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.includes(reporting_1.COMMENT_PREFACE); }).find(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.includes(mergeKeyComment); });
@@ -254,21 +254,21 @@ function run() {
                 (0, pull_request_1.createReview)(newReviewComments);
             }
         }
-        (0, core_1.info)(`Found ${coverityIssues.issues.length} Coverity issues.`);
+        (0, core_1.info)(`Found ${sigmaIssues.issues.issues.length} Coverity issues.`);
     });
 }
 function isInDiff(issue, diffMap) {
-    const diffHunks = diffMap.get(issue.mainEventFilePathname);
+    const diffHunks = diffMap.get(issue.filepath);
     if (!diffHunks) {
         return false;
     }
-    return diffHunks.filter(hunk => hunk.firstLine <= issue.mainEventLineNumber).some(hunk => issue.mainEventLineNumber <= hunk.lastLine);
+    return diffHunks.filter(hunk => hunk.firstLine <= issue.location.start.line).some(hunk => issue.location.start.line <= hunk.lastLine);
 }
 function createReviewComment(issue, commentBody) {
     return {
-        path: (0, github_context_1.relativizePath)(issue.mainEventFilePathname),
+        path: (0, github_context_1.relativizePath)(issue.filepath),
         body: commentBody,
-        line: issue.mainEventLineNumber,
+        line: issue.location.start.line,
         side: 'RIGHT'
     };
 }
@@ -283,27 +283,27 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDiffMap = exports.createMessageFromIssueWithLineInformation = exports.createMessageFromIssue = exports.mergeKeyCommentOf = exports.COMMENT_PREFACE = exports.UNKNOWN_FILE = void 0;
+exports.getDiffMap = exports.createMessageFromIssueWithLineInformation = exports.createMessageFromIssue = exports.uuidCommentOf = exports.COMMENT_PREFACE = exports.UNKNOWN_FILE = void 0;
 const github_context_1 = __nccwpck_require__(4915);
 exports.UNKNOWN_FILE = 'Unknown File';
-exports.COMMENT_PREFACE = '<!-- Comment managed by coverity-report-output-v7 action, do not modify! -->';
-const mergeKeyCommentOf = (issue) => `<!-- ${issue.mergeKey} -->`;
-exports.mergeKeyCommentOf = mergeKeyCommentOf;
+exports.COMMENT_PREFACE = '<!-- Comment managed by sigma-report-output action, do not modify! -->';
+const uuidCommentOf = (issue) => `<!-- ${issue.uuid} -->`;
+exports.uuidCommentOf = uuidCommentOf;
 function createMessageFromIssue(issue) {
-    const issueName = issue.checkerProperties ? issue.checkerProperties.subcategoryShortDescription : issue.checkerName;
-    const checkerNameString = issue.checkerProperties ? `\r\n_${issue.checkerName}_` : '';
-    const impactString = issue.checkerProperties ? issue.checkerProperties.impact : 'Unknown';
-    const cweString = issue.checkerProperties ? `, CWE-${issue.checkerProperties.cweCategory}` : '';
-    const mainEvent = issue.events.find(event => event.main === true);
-    const mainEventDescription = mainEvent ? mainEvent.eventDescription : '';
-    const remediationEvent = issue.events.find(event => event.remediation === true);
-    const remediationString = remediationEvent ? `## How to fix\r\n ${remediationEvent.eventDescription}` : '';
+    var _a, _b;
+    const issueName = issue.summary;
+    const checkerNameString = issue.checker_id;
+    const impactString = issue.severity ? issue.severity.impact : 'Unknown';
+    const cweString = ((_a = issue.taxonomies) === null || _a === void 0 ? void 0 : _a.cwe) ? `, CWE-${(_b = issue.taxonomies) === null || _b === void 0 ? void 0 : _b.cwe[0]}` : '';
+    const description = issue.desc;
+    const remediation = issue.remediation ? issue.remediation : 'Not available';
+    const remediationString = issue.remediation ? `## How to fix\r\n ${remediation}` : '';
     return `${exports.COMMENT_PREFACE}
-${(0, exports.mergeKeyCommentOf)(issue)}
-# Coverity Issue - ${issueName}
-${mainEventDescription}
+${(0, exports.uuidCommentOf)(issue)}
+# Sigma Issue - ${issueName}
+${description}
 
-_${impactString} Impact${cweString}_${checkerNameString}
+_${impactString} Impact${cweString}_ ${checkerNameString}
 
 ${remediationString}
 `;
@@ -311,11 +311,11 @@ ${remediationString}
 exports.createMessageFromIssue = createMessageFromIssue;
 function createMessageFromIssueWithLineInformation(issue) {
     const message = createMessageFromIssue(issue);
-    const relativePath = (0, github_context_1.relativizePath)(issue.mainEventFilePathname);
+    const relativePath = (0, github_context_1.relativizePath)(issue.filepath);
     return `${message}
 ## Issue location
 This issue was discovered outside the diff for this Pull Request. You can find it at:
-[${relativePath}:${issue.mainEventLineNumber}](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/blob/${process.env.GITHUB_SHA}/${relativePath}#L${issue.mainEventLineNumber})
+[${relativePath}:${issue.location.start.line}](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/blob/${process.env.GITHUB_SHA}/${relativePath}#L${issue.location.start.line})
 `;
 }
 exports.createMessageFromIssueWithLineInformation = createMessageFromIssueWithLineInformation;
