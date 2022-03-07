@@ -318,11 +318,10 @@ function createMessageFromIssue(issue) {
     const description = issue.desc;
     const remediation = issue.remediation ? issue.remediation : 'Not available';
     const remediationString = issue.remediation ? `## How to fix\r\n ${remediation}` : '';
-    const suggestion = undefined;
+    let suggestion = undefined;
     // JC: Assume only one fix for now
     // TODO: Follow up with roadmap plans for fixes
     if (issue.fixes) {
-        let suggestion = undefined;
         let fix = issue.fixes[0];
         let current_line = get_line(issue.filepath, fix.actions[0].location.start.line - 1);
         (0, core_1.info)(`DEBUG: current_line=${current_line}`);
