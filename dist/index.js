@@ -276,9 +276,9 @@ function isInDiff(issue, diffMap) {
     return diffHunks.filter(hunk => hunk.firstLine <= issue.location.start.line).some(hunk => issue.location.start.line <= hunk.lastLine);
 }
 function createReviewComment(issue, commentBody) {
-    (0, core_1.info)(`createReviewComment: path=${(0, github_context_1.relativizePath)(issue.filepath)} body=${commentBody} line=${issue.location.start.line} side=RIGHT`);
+    (0, core_1.info)(`createReviewComment: path=${issue.filepath} body=${commentBody} line=${issue.location.start.line} side=RIGHT`);
     return {
-        path: (0, github_context_1.relativizePath)(issue.filepath),
+        path: issue.filepath,
         body: commentBody,
         line: issue.location.start.line,
         side: 'RIGHT'
